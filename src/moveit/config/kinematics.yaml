@@ -1,0 +1,14 @@
+armor:
+  kinematics_solver: bio_ik/BioIKKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 1
+  goal_joint_tolerance: 0.01
+  goal_position_tolerance: 0.01
+  goal_orientation_tolerance: 0.001
+bor:
+  kinematics_solver: bio_ik/BioIKKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 0.005
+  goal_joint_tolerance: 0.0001
+  goal_position_tolerance: 0.0001
+  goal_orientation_tolerance: 0.001

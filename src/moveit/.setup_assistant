@@ -1,0 +1,11 @@
+moveit_setup_assistant_config:
+  URDF:
+    package: cornerfolk
+    relative_path: urdf/test2.urdf
+    xacro_args: ""
+  SRDF:
+    relative_path: config/arm_robot.srdf
+  CONFIG:
+    author_name: abc
+    author_email: abc@gmail.com
+    generated_timestamp: 1746374678

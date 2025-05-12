@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+  <!-- Load Gazebo -->
+  <include file="$(find cornerfolk)/launch/armor2.launch" />
+
+  <!-- RViz untuk visualisasi dan kontrol -->
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find moveit)/launch/moveit.rviz"/>
+
+</launch>
+

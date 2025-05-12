@@ -1,0 +1,129 @@
+<?xml version='1.0'?>
+
+<robot name="arm_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<xacro:include filename="example_include.xacro" />
+    <link name="world"></link>
+    <joint name="base_joint" type="fixed">
+        <origin xyz="1.5 1.0 0" rpy="0 0 0"/>
+        <parent link="world"/>
+        <child link="base_link"/>
+    </joint>
+    <link name="base_link">
+        <visual>
+            <origin xyz="0 0 0.05" rpy="0 0 0"/>
+            <geometry>
+                <box size="2.5 1.5 0.1" />
+            </geometry>
+            <material name="green">
+                <color rgba="0.2 1 0.2 1"/>
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0.05" rpy="0 0 0"/>
+            <geometry>
+                <box size="2.5 1.5 0.1"/>
+            </geometry>
+        </collision>
+        <inertial>
+            <origin xyz="0 0 0.05" rpy="0 0 0"/>
+            <mass value="12"/>
+            <inertia ixx="2.26" ixy="0.0" ixz="0.0" iyy="6.26" iyz="0.0" izz="8.5"/>
+        </inertial>
+    </link>
+    <joint name="slider_joint" type="prismatic">
+        <origin xyz="1.25 0 0.1" rpy="0 0 0"/>
+        <parent link="base_link"/>
+        <child link="slider_link"/>
+        <axis xyz="1 0 0"/>
+        <limit lower="0" upper="2" velocity="0" effort="0"/>
+	<hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <link name="slider_link">
+        <visual>
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.5 0.25 0.15"/>
+            </geometry>
+            <material name="blue"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.5 0.25 0.15"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="0.5" x="0.5" y="0.25" z="0.15">
+            <origin xyz="0 0 0.075" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+    <joint name="arm_joint" type="revolute">
+        <origin xyz="0.25 0 0.15" rpy="0 0 0"/>
+        <parent link="slider_link"/>
+        <child link="arm_link"/>
+        <axis xyz="0 -1 0"/>
+        <limit lower="0" upper="1.57" velocity="0" effort="0"/>
+	<hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+    </joint>
+    <xacro:property name="arm_length" value="1"/>
+    <xacro:property name="arm_radius" value="0.1"/>
+    <link name="arm_link">
+        <visual>
+            <origin xyz="0.5 0 0" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder length="1" radius="0.1"/>
+            </geometry>
+            <material name="orange"/>
+        </visual>
+        <collision>
+            <origin xyz="0.5 0 0" rpy="0 1.57 0"/>
+            <geometry>
+                <cylinder length="1" radius="0.1"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_cylinder mass="1.0" length="1" radius="0.1">
+            <origin xyz="0.5 0 0" rpy="0 1.57 0"/>
+        </xacro:inertial_cylinder>
+    </link>
+    <joint name="camera_joint" type="fixed">
+        <origin xyz="1 0 0.175" rpy="0 0 0"/>
+        <parent link="arm_link"/>
+        <child link="camera_link"/>
+    </joint>
+    <link name="camera_link">
+        <visual>
+            <origin xyz="-0.03 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.06 0.15 0.15"/>
+            </geometry>
+            <material name="white"/>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="0.06 0.15 0.15"/>
+            </geometry>
+        </collision>
+        <xacro:inertial_box mass="0.1" x="0.06" y="0.15" z="0.15">
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+        </xacro:inertial_box>
+    </link>
+<gazebo reference="base_link">
+    <material>Gazebo/Green</material>
+  </gazebo>
+<gazebo reference="slider_link">
+    <material>Gazebo/Blue</material>
+  </gazebo>
+<gazebo reference="arm_link">
+    <material>Gazebo/Orange</material>
+  </gazebo>
+<gazebo reference="camera_link">
+    <material>Gazebo/White</material>
+  </gazebo>
+<gazebo>
+  <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/arm_robot</robotNamespace>
+  </plugin>
+</gazebo>
+
+
+</robot>

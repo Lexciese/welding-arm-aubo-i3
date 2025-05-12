@@ -1,0 +1,11 @@
+armor:
+  type: "position_controllers/JointTrajectoryController"
+  joints: [joint_1, joint_2, joint_3, joint_4, joint_5, joint_bor]
+
+bor:
+  type: "position_controllers/JointTrajectoryController"
+  joints: [joint_bor]
+
+joint_state_controller:
+  type: "joint_state_controller/JointStateController"
+  publish_rate: 50

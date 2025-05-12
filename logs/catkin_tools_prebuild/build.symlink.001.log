@@ -1,0 +1,46 @@
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./local_setup.bash
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./env.sh
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./local_setup.zsh
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./setup.sh
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./_setup_util.py
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./cmake.lock
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./setup.zsh
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./setup.bash
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/./local_setup.sh
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/lib/pkgconfig/catkin_tools_prebuild.pc
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake
+Symlinking /home/lexciese-wsl/dev/Subject 1 with moveit/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/local_setup.sh, /home/rakha/Downloads/Subject 1 New/devel/./local_setup.sh)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/setup.zsh, /home/rakha/Downloads/Subject 1 New/devel/./setup.zsh)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/cmake.lock, /home/rakha/Downloads/Subject 1 New/devel/./cmake.lock)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/local_setup.bash, /home/rakha/Downloads/Subject 1 New/devel/./local_setup.bash)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/_setup_util.py, /home/rakha/Downloads/Subject 1 New/devel/./_setup_util.py)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/setup.bash, /home/rakha/Downloads/Subject 1 New/devel/./setup.bash)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/env.sh, /home/rakha/Downloads/Subject 1 New/devel/./env.sh)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/local_setup.zsh, /home/rakha/Downloads/Subject 1 New/devel/./local_setup.zsh)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/setup.sh, /home/rakha/Downloads/Subject 1 New/devel/./setup.sh)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake, /home/rakha/Downloads/Subject 1 New/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake, /home/rakha/Downloads/Subject 1 New/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake)
+Cleaning: (/home/rakha/Downloads/Subject 1 New/devel/.private/catkin_tools_prebuild/lib/pkgconfig/catkin_tools_prebuild.pc, /home/rakha/Downloads/Subject 1 New/devel/lib/pkgconfig/catkin_tools_prebuild.pc)
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./local_setup.sh
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./setup.zsh
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./local_setup.bash
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./_setup_util.py
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./setup.bash
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./env.sh
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./local_setup.zsh
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/./setup.sh
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig-version.cmake
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/share/catkin_tools_prebuild/cmake/catkin_tools_prebuildConfig.cmake
+Already unlinked: {}
+Unlinking: /home/rakha/Downloads/Subject 1 New/devel/lib/pkgconfig/catkin_tools_prebuild.pc
+Already unlinked: {}

@@ -1,0 +1,17 @@
+Design: Page 79
+PUMA 560 4 Solution: Page 105
+PUMA 560 Inverse Kinematics Equation: Page 117
+
+a2 = 0.2
+d3 = 0.1575 or 0.18 or 0.2025
+a3 = 0
+d4 = 0.2
+
+d = [0.45, 0.205, 0, 0.15, 0.105]
+r = [0, 0.2, -0.0475, 0, 0]
+a = [-90, 0, 90, -90, 90]
+
+work:
+0.75, 0.15, 0.86, 60, 60
+
+

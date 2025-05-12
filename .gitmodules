@@ -1,0 +1,3 @@
+[submodule "src/bio_ik"]
+	path = src/bio_ik
+	url = https://github.com/TAMS-Group/bio_ik

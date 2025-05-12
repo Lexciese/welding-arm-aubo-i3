@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="model" />
+    <param name="robot_description" command="$(find xacro)/xacro '$(find cornerfolk)/urdf/test2.urdf'" />
+    <!--node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>-->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+  <!--node name="move_group" pkg="moveit_ros_move_group" type="move_group" output="screen" />-->
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find cornerfolk)/launch/test_config.rviz"/>
+<!--node name="rviz" pkg="rviz" type="rviz" args="-d $(find moveit)/launch/moveit.rviz"/-->
+<node name="joint_state_publisher_gui" pkg="joint_state_publisher_gui" type="joint_state_publisher_gui" output="screen" />
+</launch>
