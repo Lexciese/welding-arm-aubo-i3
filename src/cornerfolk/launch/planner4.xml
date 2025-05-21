@@ -1,0 +1,32 @@
+<launch>
+  <!-- First include the basic demo.launch to load the robot model and MoveIt -->
+  <include file="$(find aubo_i3_moveit_config)/launch/demo.launch">
+    <!-- Enable GUI for joint state visualization -->
+    <arg name="use_gui" value="true"/>
+    <!-- Enable debug if needed -->
+    <arg name="debug" value="false"/>
+  </include>
+  
+  <!-- Add a simple fixture for pipe welding -->
+  <!-- <param name="pipe_fixture_description" command="$(find xacro)/xacro '$(find aubo_description)/urdf/pipe_fixture.urdf.xacro'" /> -->
+  
+  <!-- Load pipe description to parameter server -->
+  <param name="pipe_diameter" value="0.1016" />  <!-- 4 inches in meters -->
+  <param name="pipe_length" value="0.3" />
+  <param name="pipe_position_x" value="0.4" />
+  <param name="pipe_position_y" value="0.0" />
+  <param name="pipe_position_z" value="0.2" />
+  
+  <!-- Welding parameters -->
+  <param name="tack_weld_positions" value="4" />
+  <param name="weld_speed" value="0.005" />
+  <param name="torch_angle" value="0.7853981634" /> <!-- pi/4 radians -->
+  
+  <!-- Start the pipe welding node -->
+  <node name="pipe_welding_planner" pkg="cornerfolk" type="planner4.py" output="screen">
+    <!-- Optional additional parameters can be specified here -->
+  </node>
+  
+  Add a marker visualizer for the pipe
+  <node name="pipe_visualization" pkg="visualization_marker_tutorials" type="basic_shapes" args="pipe" output="screen" />
+</launch>

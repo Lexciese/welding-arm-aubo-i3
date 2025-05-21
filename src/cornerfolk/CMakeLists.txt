@@ -178,6 +178,10 @@ find_package(roslaunch)
 catkin_install_python(PROGRAMS
   scripts/planner.py
   scripts/planner2.py
+  scripts/planner3.py
+  scripts/planner4.py
+  scripts/planner5.py
+  scripts/planner6.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

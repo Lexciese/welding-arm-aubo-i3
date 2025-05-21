@@ -1,0 +1,20 @@
+# Pipe parameters
+pipe:
+  diameter: 0.1143  # 4 inches in meters
+  length: 1.0       # 1 meter length
+  position: [0.5, 0.0, 0.3]  # x,y,z position of pipe center
+  orientation: [0, 0, 0]     # roll, pitch, yaw
+
+# Welding parameters
+welding:
+  tack_points: 4             # Number of tack welds
+  base_speed: 0.005          # Base speed (m/s)
+  min_speed: 0.003           # Minimum speed in heat-sensitive areas
+  max_speed: 0.007           # Maximum speed in cooler areas
+  weld_offset: 0.002         # offset from pipe surface
+  interpass_offset: 0.0015   # offset between layers
+  thermal:
+    heat_sensitivity_angles: [45, 135, 225, 315]  # Degrees where heat builds up
+    sensitivity_radius: 20    # Degrees around sensitive points to slow down
+    cooling_time_per_pass: 30 # Seconds between passes
+    segment_size: 90          # Degrees per welding segment for thermal sequencing

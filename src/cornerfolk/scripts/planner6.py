@@ -5,6 +5,7 @@ import threading
 import moveit_commander
 import moveit_msgs.msg
 import geometry_msgs.msg
+import shape_msgs.msg  # Import for collision object primitives
 from std_msgs.msg import Float32MultiArray, ColorRGBA
 from geometry_msgs.msg import Pose, PoseArray, Point
 from visualization_msgs.msg import Marker, MarkerArray
@@ -108,55 +109,99 @@ class AuboRobotPlannerNode():
                 pose.position.y = center[1] + radius * math.sin(angle)
                 pose.position.z = center[2] + height
                 
-                # Calculate unit vector from point to center in XY plane
-                direction_vector = [center[0] - pose.position.x, center[1] - pose.position.y, 0]
-                magnitude = math.sqrt(sum([x**2 for x in direction_vector]))
-                if magnitude > 0:  # Avoid division by zero
-                    direction_vector = [x/magnitude for x in direction_vector]
+                # Calculate tangent vector (clockwise along circle) - this will be our X axis
+                tangent_x = -math.sin(angle)
+                tangent_y = math.cos(angle)
                 
-                # Create a quaternion where z-axis is up and x-axis points toward center
-                # This makes the x-y plane of the end effector tangent to the circle
-                yaw = math.atan2(direction_vector[1], direction_vector[0])
-                q = quaternion_from_euler(0, 0, yaw)
+                # Z axis is up (0, 0, 1)
+                # Y axis is the cross product of Z and X to ensure orthogonality
+                # This makes the tool approach from the side with X along the circle
+                
+                # Convert these axes to a quaternion
+                # For Z-up, X tangent to circle, tool is sideways
+                roll = math.pi/2  # Rotate 90° around X to make the tool sideways
+                yaw = math.atan2(tangent_y, tangent_x)  # Orient X along tangent
+                q = quaternion_from_euler(roll, 0, yaw)
                 
             elif axis == 'x':
                 pose.position.x = center[0] + height
                 pose.position.y = center[1] + radius * math.cos(angle)
                 pose.position.z = center[2] + radius * math.sin(angle)
                 
-                # Calculate unit vector from point to center in YZ plane
-                direction_vector = [0, center[1] - pose.position.y, center[2] - pose.position.z]
-                magnitude = math.sqrt(sum([x**2 for x in direction_vector]))
-                if magnitude > 0:
-                    direction_vector = [x/magnitude for x in direction_vector]
+                # For X-axis circle, tangent is in YZ plane
+                tangent_y = -math.sin(angle)
+                tangent_z = math.cos(angle)
                 
-                # For x-axis circle, we need to align y-axis with the cross product of x-axis and direction
-                # This ensures the end effector y-z plane is tangent to the circle
-                # First calculate the roll and pitch to point z-axis toward center
-                roll = 0
-                pitch = math.atan2(direction_vector[2], direction_vector[1]) + math.pi/2  # +90 degrees
-                q = quaternion_from_euler(roll, pitch, 0)
+                # For tool to approach from side:
+                # X points along circle tangent direction
+                # Z points outward from circle
+                # Y is determined by right-hand rule
+                
+                # Direction from center to point (for Z axis)
+                radial_y = pose.position.y - center[1]
+                radial_z = pose.position.z - center[2]
+                radial_mag = math.sqrt(radial_y**2 + radial_z**2)
+                if radial_mag > 0:
+                    normal_y = radial_y / radial_mag
+                    normal_z = radial_z / radial_mag
+                else:
+                    normal_y, normal_z = 0, 1
+                
+                # Using direction cosine matrix to quaternion conversion
+                # First build rotation matrix where:
+                # - X column is tangent vector (0, tangent_y, tangent_z)
+                # - Z column is outward normal (0, normal_y, normal_z)
+                # - Y column is cross product Z×X
+                
+                # Calculate Y by cross product (Z×X) - maintains right-hand coordinate system
+                cross_y = -normal_z * tangent_z  # First component is zero
+                cross_z = normal_y * tangent_z
+                
+                # Convert this frame orientation to a quaternion
+                # Using a simplification for this specific case
+                pitch = math.atan2(tangent_z, tangent_y)
+                yaw = 0
+                roll = math.pi/2  # Rotate so tool is sideways to circle
+                
+                q = quaternion_from_euler(roll, pitch, yaw)
                 
             elif axis == 'y':
                 pose.position.x = center[0] + radius * math.cos(angle)
                 pose.position.y = center[1] + height
                 pose.position.z = center[2] + radius * math.sin(angle)
                 
-                # Calculate unit vector from point to center in XZ plane
-                direction_vector = [center[0] - pose.position.x, 0, center[2] - pose.position.z]
-                magnitude = math.sqrt(sum([x**2 for x in direction_vector]))
-                if magnitude > 0:
-                    direction_vector = [x/magnitude for x in direction_vector]
+                # For Y-axis circle, tangent is in XZ plane
+                tangent_x = -math.sin(angle)
+                tangent_z = math.cos(angle)
                 
-                # For y-axis circle, align the end effector to have x-z plane tangent to circle
-                roll = math.atan2(direction_vector[2], direction_vector[0]) + math.pi/2  # +90 degrees
-                pitch = 0
-                q = quaternion_from_euler(roll, pitch, 0)
+                # Similar approach to the x-axis case, but adapted for y-axis
+                # Direction from center to point (for normal)
+                radial_x = pose.position.x - center[0]
+                radial_z = pose.position.z - center[2]
+                radial_mag = math.sqrt(radial_x**2 + radial_z**2)
+                if radial_mag > 0:
+                    normal_x = radial_x / radial_mag
+                    normal_z = radial_z / radial_mag
+                else:
+                    normal_x, normal_z = 1, 0
+                
+                # Convert to a quaternion
+                roll = math.atan2(tangent_z, tangent_x)
+                pitch = math.pi/2  # Rotate so tool is sideways to circle
+                yaw = 0
+                
+                q = quaternion_from_euler(roll, pitch, yaw)
             
             pose.orientation.x = q[0]
             pose.orientation.y = q[1]
             pose.orientation.z = q[2]
             pose.orientation.w = q[3]
+            
+            # Log orientation angles for debugging
+            rpy = euler_from_quaternion([q[0], q[1], q[2], q[3]])
+            rospy.logdebug(f"Waypoint {i}: Roll={math.degrees(rpy[0]):.1f}°, "
+                          f"Pitch={math.degrees(rpy[1]):.1f}°, "
+                          f"Yaw={math.degrees(rpy[2]):.1f}°")
             
             waypoints.append(pose)
             
@@ -469,29 +514,206 @@ class AuboRobotPlannerNode():
     def demo_circular_motion(self, event=None):
         """
         Demonstrate a circular motion with the robot
+        Performs 5 runs with increasing offsets:
+        - First run: 4 waypoints
+        - Runs 2-5: 20 waypoints each
+        - Each run has an offset of 0.05 from the previous run
         """
-        rospy.loginfo("Starting circular motion demo")
+        rospy.loginfo("Starting multi-run circular motion demo")
         
         # Get current end effector position
         current_pose = self.group.get_current_pose().pose
         
-        # Define circle parameters (centered 20cm in front of current position)
-        center = [
+        # Base center position (will be offset for each run)
+        base_center = [
             current_pose.position.x + 0.2,  # 20cm in front of current position
             current_pose.position.y,
             current_pose.position.z - 0.2
         ]
         
         radius = 0.1   # 10cm radius
+        axis = 'z'     # Circle perpendicular to z-axis (in XY plane)
         
-        # Execute circular motion with x-axis
-        self.execute_circular_motion(
-            center=center,
-            radius=radius,
-            num_points=12,  # Move through 12 points around the circle
-            axis='z',       # Circle perpendicular to z-axis (in YZ plane)
-            velocity_scale=0.3  # Move at 30% of maximum speed
-        )
+        # Perform 5 runs with different offsets and waypoint counts
+        for run in range(5):
+            radius = radius + 0.05  # 5cm offset per run
+            
+            # First run has 4 waypoints, remaining runs have 20
+            num_points = 4 if run == 0 else 20
+            
+            rospy.loginfo(f"Run {run+1}/5: radius={radius:.2f}m, waypoints={num_points}")
+            
+            # Execute circular motion
+            success = self.execute_circular_motion(
+                center=base_center,
+                radius=radius,
+                num_points=num_points,  
+                axis=axis,       
+                velocity_scale=0.3  # Move at 30% of maximum speed
+            )
+            
+            # If circular motion failed, stop the demo
+            if not success:
+                rospy.logwarn("Multi-run circular motion demo aborted")
+                return
+            
+            # Pause between runs
+            if run < 4:  # Don't pause after the last run
+                rospy.loginfo(f"Completed run {run+1}/5. Starting next run in 2 seconds...")
+                rospy.sleep(2)
+        
+        rospy.loginfo("Multi-run circular motion demo completed successfully")
+
+    def add_tube_collision_object(self, name, radius, height, pose, frame_id="world"):
+        """
+        Add a tube-shaped collision object to the planning scene
+        
+        Parameters:
+        - name: unique identifier for the collision object
+        - radius: radius of the tube
+        - height: height of the tube
+        - pose: geometry_msgs.msg.Pose object with position and orientation
+        - frame_id: reference frame for the object
+        """
+        # Create a collision object
+        collision_object = moveit_msgs.msg.CollisionObject()
+        collision_object.header.frame_id = frame_id
+        collision_object.id = name
+        
+        # Define the shape as a cylinder (tube)
+        cylinder = shape_msgs.msg.SolidPrimitive()
+        cylinder.type = shape_msgs.msg.SolidPrimitive.CYLINDER
+        cylinder.dimensions = [height, radius]  # [height, radius] for CYLINDER
+        
+        # Set the pose
+        collision_object.primitives = [cylinder]
+        collision_object.primitive_poses = [pose]
+        collision_object.operation = collision_object.ADD
+        
+        # Add the collision object to the planning scene
+        self.scene.add_object(collision_object)
+        rospy.loginfo(f"Added tube collision object '{name}' to planning scene")
+        
+        return collision_object
+    
+    def visualize_tube(self, name, radius, height, pose, color=None, frame_id="world"):
+        """
+        Visualize a tube in RViz using markers
+        
+        Parameters:
+        - name: unique identifier for the marker
+        - radius: radius of the tube
+        - height: height of the tube
+        - pose: geometry_msgs.msg.Pose object with position and orientation
+        - color: (r, g, b, a) tuple for color, defaults to orange if None
+        - frame_id: reference frame for the visualization
+        """
+        if color is None:
+            color = (1.0, 0.5, 0.0, 0.6)  # Orange semi-transparent by default
+        
+        # Create a marker for the tube
+        marker = Marker()
+        marker.header.frame_id = frame_id
+        marker.header.stamp = rospy.Time.now()
+        marker.ns = "collision_objects"
+        marker.id = hash(name) % 10000  # Convert name to a numeric ID
+        marker.type = Marker.CYLINDER
+        marker.action = Marker.ADD
+        
+        # Set the pose
+        marker.pose = pose
+        
+        # Set the scale (dimensions)
+        marker.scale.x = radius * 2  # Diameter in x
+        marker.scale.y = radius * 2  # Diameter in y
+        marker.scale.z = height      # Height in z
+        
+        # Set the color
+        marker.color.r = color[0]
+        marker.color.g = color[1]
+        marker.color.b = color[2]
+        marker.color.a = color[3]
+        
+        # Set marker to last indefinitely
+        marker.lifetime = rospy.Duration(0)
+        
+        # Create a marker array and publish
+        marker_array = MarkerArray()
+        marker_array.markers.append(marker)
+        self.marker_publisher.publish(marker_array)
+        
+        rospy.loginfo(f"Published visualization marker for tube '{name}'")
+    
+    def setup_collision_environment(self, center, radius, axis='z'):
+        """
+        Set up the collision environment with a tube inside the circular motion path
+        
+        Parameters:
+        - center: [x, y, z] coordinates of circle center
+        - radius: circle radius of the motion path
+        - axis: axis perpendicular to circle plane ('x', 'y', or 'z')
+        """
+        # Clear existing collision objects
+        self.scene.remove_world_object()
+        rospy.sleep(0.5)  # Wait for the scene to update
+        
+        # Use smaller radius for the tube so the robot moves around it
+        tube_radius = radius * 0.6  # 60% of the motion radius
+        tube_height = 0.5  # 50cm height
+        
+        # Create a tube pose
+        tube_pose = Pose()
+        tube_pose.position.x = center[0]
+        tube_pose.position.y = center[1]
+        tube_pose.position.z = center[2]
+        
+        # Set orientation based on the circle axis
+        if axis == 'z':
+            # Tube is already aligned with z-axis by default
+            tube_pose.orientation.w = 1.0
+        elif axis == 'x':
+            # Rotate 90 degrees around y to align with x-axis
+            q = quaternion_from_euler(0, math.pi/2, 0)
+            tube_pose.orientation.x = q[0]
+            tube_pose.orientation.y = q[1]
+            tube_pose.orientation.z = q[2]
+            tube_pose.orientation.w = q[3]
+        elif axis == 'y':
+            # Rotate -90 degrees around x to align with y-axis
+            q = quaternion_from_euler(math.pi/2, 0, 0)
+            tube_pose.orientation.x = q[0]
+            tube_pose.orientation.y = q[1]
+            tube_pose.orientation.z = q[2]
+            tube_pose.orientation.w = q[3]
+        
+        # Add the tube collision object
+        self.add_tube_collision_object("motion_tube", tube_radius, tube_height, tube_pose)
+        
+        # Visualize the tube
+        self.visualize_tube("motion_tube", tube_radius, tube_height, tube_pose)
+        
+        # Wait for the planning scene to update
+        rospy.sleep(1.0)
+    
+    def execute_circular_motion_with_collision_avoidance(self, center, radius, num_points=20, axis='x', velocity_scale=None, max_retries=3, position_tolerance=0.01, orientation_tolerance=0.1):
+        """
+        Execute motion in a circular pattern with collision avoidance
+        
+        Parameters:
+        - center: [x, y, z] coordinates of circle center
+        - radius: circle radius
+        - num_points: number of waypoints to generate
+        - axis: axis perpendicular to circle plane ('x', 'y', or 'z')
+        - velocity_scale: robot movement speed (0.0 to 1.0)
+        - max_retries: maximum number of attempts for each waypoint
+        - position_tolerance: tolerance for position error (meters)
+        - orientation_tolerance: tolerance for orientation error (radians)
+        """
+        # Set up the collision environment with a tube inside the circle
+        self.setup_collision_environment(center, radius, axis=axis)
+        
+        # Now execute the circular motion with collision checking enabled
+        return self.execute_circular_motion(center, radius, num_points, axis, velocity_scale, max_retries, position_tolerance, orientation_tolerance)
 
     def ros_planner(self):
         rospy.spin()

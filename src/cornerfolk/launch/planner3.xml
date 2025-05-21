@@ -1,0 +1,11 @@
+<launch>
+  <!-- Load the Aubo i3 robot -->
+  <include file="$(find aubo_i3_moveit_config)/launch/demo.launch">
+    <arg name="use_gui" value="false"/>
+  </include>
+
+  <!-- Load welding parameters -->
+  <rosparam command="load" file="$(find cornerfolk)/config/welding_params.yaml"/>
+
+  
+</launch>

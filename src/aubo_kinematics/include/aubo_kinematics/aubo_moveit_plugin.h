@@ -121,6 +121,12 @@ namespace aubo_kinematics
                             const std::string &tip_name,
                             double search_discretization);
 
+    bool initialize(const moveit::core::RobotModelConstPtr& robot_model,
+                    const std::string& group_name,
+                    const std::string& base_frame,
+                    const std::string& tip_frame,
+                    double search_discretization);
+
     /**
 * @brief Return all the joint names in the order they are used internally
 */
