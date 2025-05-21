@@ -531,20 +531,22 @@ class AuboRobotPlannerNode():
             current_pose.position.z - 0.2
         ]
         
-        radius = 0.1   # 10cm radius
+        # ###################################
+        # TUNE OR CHANGE THIS VALUE
+        # ###################################
+        radius = 0.025
         axis = 'z'     # Circle perpendicular to z-axis (in XY plane)
         
         # Perform 5 runs with different offsets and waypoint counts
-        for run in range(5):
-            radius = radius + 0.05  # 5cm offset per run
+        for run in range(6):
             
             # First run has 4 waypoints, remaining runs have 20
             num_points = 4 if run == 0 else 20
             
             rospy.loginfo(f"Run {run+1}/5: radius={radius:.2f}m, waypoints={num_points}")
             
-            # Execute circular motion
-            success = self.execute_circular_motion(
+            # Execute circular motion with collision avoidance
+            success = self.execute_circular_motion_with_collision_avoidance(
                 center=base_center,
                 radius=radius,
                 num_points=num_points,  
@@ -552,6 +554,8 @@ class AuboRobotPlannerNode():
                 velocity_scale=0.3  # Move at 30% of maximum speed
             )
             
+            radius = radius + 0.05  # 5cm offset per run
+
             # If circular motion failed, stop the demo
             if not success:
                 rospy.logwarn("Multi-run circular motion demo aborted")
