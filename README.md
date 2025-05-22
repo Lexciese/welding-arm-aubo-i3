@@ -82,6 +82,6 @@ terminal 2:
 source devel/setup.bash
 ```
 ```bash
-rosrun cornerfolk planner2.py
+rosrun cornerfolk planner6.py
 ```
 
