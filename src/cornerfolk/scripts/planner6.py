@@ -849,7 +849,7 @@ class AuboRobotPlannerNode():
         - orientation_tolerance: tolerance for orientation error (radians)
         """
         # Set up the collision environment with a tube inside the circle
-        # self.setup_collision_environment(center, radius, axis=axis)
+        self.setup_collision_environment(center, radius, axis=axis)
         
         # Now execute the circular motion with collision checking enabled
         return self.execute_circular_motion(center, radius, num_points, axis, velocity_scale, max_retries, position_tolerance, orientation_tolerance)
