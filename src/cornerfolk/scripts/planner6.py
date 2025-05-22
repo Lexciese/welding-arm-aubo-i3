@@ -109,11 +109,11 @@ class AuboRobotPlannerNode():
                 pose.position.y = center[1] + radius * math.sin(angle)
                 pose.position.z = center[2] + height
                 
-                # Calculate vector from waypoint to center (inward radial direction)
-                # This will be our tool's X-axis (pointing toward center)
+                # Calculate vector from center to waypoint (outward radial direction)
+                # This will be our tool's X-axis (pointing outward from center)
                 x_axis = [
-                    center[0] - pose.position.x,
-                    center[1] - pose.position.y,
+                    pose.position.x - center[0],  # Flipped to point outward
+                    pose.position.y - center[1],  # Flipped to point outward
                     0  # Z component is zero because we're in XY plane
                 ]
                 
@@ -121,8 +121,8 @@ class AuboRobotPlannerNode():
                 x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
                 x_axis = [x/x_norm for x in x_axis]
                 
-                # Z axis is along the circle axis (global Z) - FLIPPED
-                z_axis = [0, 0, -1]  # Flipped from [0, 0, 1]
+                # Z axis is along the circle axis (global Z) - NOW POINTING OUTWARD
+                z_axis = [0, 0, 1]  # Changed from [0, 0, -1] to point outward
                 
                 # Y axis is the cross product of Z and X (right-hand rule)
                 y_axis = [
@@ -146,20 +146,20 @@ class AuboRobotPlannerNode():
                 pose.position.y = center[1] + radius * math.cos(angle)
                 pose.position.z = center[2] + radius * math.sin(angle)
                 
-                # Calculate vector from waypoint to center (inward radial direction)
-                # This will be our tool's X-axis
+                # Calculate vector from center to waypoint (outward radial direction)
+                # This will be our tool's X-axis pointing outward from center
                 x_axis = [
                     0,  # X component is zero because we're in YZ plane
-                    center[1] - pose.position.y,
-                    center[2] - pose.position.z
+                    pose.position.y - center[1],  # Flipped to point outward
+                    pose.position.z - center[2]   # Flipped to point outward
                 ]
                 
                 # Normalize x_axis
                 x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
                 x_axis = [x/x_norm for x in x_axis]
                 
-                # Z axis is along the circle axis (global X) - FLIPPED
-                z_axis = [-1, 0, 0]  # Flipped from [1, 0, 0]
+                # Z axis is along the circle axis (global X) - NOW POINTING OUTWARD
+                z_axis = [1, 0, 0]  # Changed from [-1, 0, 0] to point outward
                 
                 # Y axis is the cross product of Z and X (right-hand rule)
                 y_axis = [
@@ -183,20 +183,20 @@ class AuboRobotPlannerNode():
                 pose.position.y = center[1] + height
                 pose.position.z = center[2] + radius * math.sin(angle)
                 
-                # Calculate vector from waypoint to center (inward radial direction)
-                # This will be our tool's X-axis
+                # Calculate vector from center to waypoint (outward radial direction)
+                # This will be our tool's X-axis pointing outward from center
                 x_axis = [
-                    center[0] - pose.position.x,
+                    pose.position.x - center[0],  # Flipped to point outward
                     0,  # Y component is zero because we're in XZ plane
-                    center[2] - pose.position.z
+                    pose.position.z - center[2]   # Flipped to point outward
                 ]
                 
                 # Normalize x_axis
                 x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
                 x_axis = [x/x_norm for x in x_axis]
                 
-                # Z axis is along the circle axis (global Y) - FLIPPED
-                z_axis = [0, -1, 0]  # Flipped from [0, 1, 0]
+                # Z axis is along the circle axis (global Y) - NOW POINTING OUTWARD
+                z_axis = [0, 1, 0]  # Changed from [0, -1, 0] to point outward
                 
                 # Y axis is the cross product of Z and X (right-hand rule)
                 y_axis = [
@@ -665,12 +665,12 @@ class AuboRobotPlannerNode():
         # TUNE OR CHANGE THIS VALUE
         # ###################################
         base_center = [
-            current_pose.position.x + 0.2,  # 20cm in front of current position
-            current_pose.position.y,
-            current_pose.position.z - 0.2
+            current_pose.position.x + 0.3,  # 20cm in front of current position
+            current_pose.position.y + 0.1,
+            current_pose.position.z - 0.3
         ]
         radius = 0.05
-        axis = 'x'     # xyz
+        axis = 'z'     # xyz
         
         # Perform 5 runs with different offsets and waypoint counts
         for run in range(6):
@@ -689,7 +689,7 @@ class AuboRobotPlannerNode():
                 velocity_scale=0.3  # Move at 30% of maximum speed
             )
             
-            radius = radius + 0.05  # 5cm offset per run
+            radius = radius + 0.01  # 5cm offset per run
 
             # If circular motion failed, stop the demo
             if not success:

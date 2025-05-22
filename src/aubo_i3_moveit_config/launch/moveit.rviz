@@ -9,6 +9,8 @@ Panels:
         - /MotionPlanning1/Planning Request1
         - /MarkerArray1
         - /MarkerArray2
+        - /TF1
+        - /TF1/Frames1
       Splitter Ratio: 0.7425600290298462
     Tree Height: 313
   - Class: rviz/Help
@@ -219,7 +221,12 @@ Visualization Manager:
       Marker Topic: /waypoint_markers
       Name: MarkerArray
       Namespaces:
-        {}
+        waypoint_numbers: true
+        waypoint_path: true
+        waypoint_positions: true
+        waypoint_x_axis: true
+        waypoint_y_axis: true
+        waypoint_z_axis: true
       Queue Size: 100
       Value: true
     - Class: rviz/InteractiveMarkers
@@ -236,8 +243,7 @@ Visualization Manager:
       Marker Topic: /welding_markers
       Name: MarkerArray
       Namespaces:
-        speed_profile: true
-        welding_path: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/Marker
@@ -245,8 +251,52 @@ Visualization Manager:
       Marker Topic: /thermal_markers
       Name: Marker
       Namespaces:
-        thermal_map: true
+        {}
       Queue Size: 100
+      Value: true
+    - Class: rviz/TF
+      Enabled: true
+      Filter (blacklist): ""
+      Filter (whitelist): ""
+      Frame Timeout: 15
+      Frames:
+        All Enabled: false
+        base_link:
+          Value: false
+        foreArm_Link:
+          Value: false
+        pedestal_Link:
+          Value: false
+        shoulder_Link:
+          Value: false
+        upperArm_Link:
+          Value: false
+        world:
+          Value: false
+        wrist1_Link:
+          Value: false
+        wrist2_Link:
+          Value: false
+        wrist3_Link:
+          Value: true
+      Marker Alpha: 1
+      Marker Scale: 1
+      Name: TF
+      Show Arrows: false
+      Show Axes: true
+      Show Names: false
+      Tree:
+        world:
+          pedestal_Link:
+            base_link:
+              shoulder_Link:
+                upperArm_Link:
+                  foreArm_Link:
+                    wrist1_Link:
+                      wrist2_Link:
+                        wrist3_Link:
+                          {}
+      Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
@@ -280,9 +330,9 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5947970747947693
+      Pitch: 0.6547970175743103
       Target Frame: world
-      Yaw: 5.0199503898620605
+      Yaw: 5.444950580596924
     Saved: ~
 Window Geometry:
   Displays:
@@ -300,5 +350,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 1908
-  X: 0
-  Y: 0
+  X: -32
+  Y: -32

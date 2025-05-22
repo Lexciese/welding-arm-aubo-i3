@@ -210,6 +210,26 @@
     <limit lower="-3.04" upper="3.04" effort="0" velocity="0" />
   </joint>
 
+  <!-- Add a tool_link with flipped Z and X axes -->
+  <link name="tool_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.005" length="0.04"/>
+      </geometry>
+      <material name="">
+        <color rgba="1 0 0 0.8"/>
+      </material>
+    </visual>
+  </link>
+
+  <!-- Fixed joint to flip Z and X axes -->
+  <joint name="tool_joint" type="fixed">
+    <origin xyz="0 0 0" rpy="0 1.5708 0"/>  <!-- 90 deg rotation around Y axis swaps Z and X -->
+    <parent link="wrist3_Link"/>
+    <child link="tool_link"/>
+  </joint>
+
   <link name="world" />
 
   <joint name="world_joint" type="fixed">
