@@ -42,7 +42,7 @@ class AuboRobotPlannerNode():
         self.waypoint_frame_id = "world" # Use your robot's base frame
 
         # Wait for RVIZ to initialize. This sleep is ONLY to allow Rviz to come up.
-        rospy.sleep(10)
+        rospy.sleep(5)
 
         rospy.loginfo('The name of the reference frame for this robot: %s', str(self.group.get_planning_frame()))
         rospy.loginfo('The name of the end-effector link for this group: %s', str(self.group.get_end_effector_link()))
@@ -84,7 +84,7 @@ class AuboRobotPlannerNode():
     
     def generate_circular_waypoints(self, center, radius, num_points, start_angle=0, end_angle=2*math.pi, height=0, axis='z'):
         """
-        Generate waypoints in a circular pattern with orientation perpendicular to circle
+        Generate waypoints in a circular pattern with end effector X-axis pointing toward circle center
         
         Parameters:
         - center: [x, y, z] coordinates of circle center
@@ -109,88 +109,111 @@ class AuboRobotPlannerNode():
                 pose.position.y = center[1] + radius * math.sin(angle)
                 pose.position.z = center[2] + height
                 
-                # Calculate tangent vector (clockwise along circle) - this will be our X axis
-                tangent_x = -math.sin(angle)
-                tangent_y = math.cos(angle)
+                # Calculate vector from waypoint to center (inward radial direction)
+                # This will be our tool's X-axis (pointing toward center)
+                x_axis = [
+                    center[0] - pose.position.x,
+                    center[1] - pose.position.y,
+                    0  # Z component is zero because we're in XY plane
+                ]
                 
-                # Z axis is up (0, 0, 1)
-                # Y axis is the cross product of Z and X to ensure orthogonality
-                # This makes the tool approach from the side with X along the circle
+                # Normalize x_axis
+                x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
+                x_axis = [x/x_norm for x in x_axis]
                 
-                # Convert these axes to a quaternion
-                # For Z-up, X tangent to circle, tool is sideways
-                roll = math.pi/2  # Rotate 90° around X to make the tool sideways
-                yaw = math.atan2(tangent_y, tangent_x)  # Orient X along tangent
-                q = quaternion_from_euler(roll, 0, yaw)
+                # Z axis is along the circle axis (global Z) - FLIPPED
+                z_axis = [0, 0, -1]  # Flipped from [0, 0, 1]
+                
+                # Y axis is the cross product of Z and X (right-hand rule)
+                y_axis = [
+                    z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
+                    z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
+                    z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
+                ]
+                
+                # Build a rotation matrix with these axes
+                rotation_matrix = [
+                    x_axis[0], y_axis[0], z_axis[0],
+                    x_axis[1], y_axis[1], z_axis[1],
+                    x_axis[2], y_axis[2], z_axis[2]
+                ]
+                
+                # Convert to quaternion
+                q = self.rotation_matrix_to_quaternion(rotation_matrix)
                 
             elif axis == 'x':
                 pose.position.x = center[0] + height
                 pose.position.y = center[1] + radius * math.cos(angle)
                 pose.position.z = center[2] + radius * math.sin(angle)
                 
-                # For X-axis circle, tangent is in YZ plane
-                tangent_y = -math.sin(angle)
-                tangent_z = math.cos(angle)
+                # Calculate vector from waypoint to center (inward radial direction)
+                # This will be our tool's X-axis
+                x_axis = [
+                    0,  # X component is zero because we're in YZ plane
+                    center[1] - pose.position.y,
+                    center[2] - pose.position.z
+                ]
                 
-                # For tool to approach from side:
-                # X points along circle tangent direction
-                # Z points outward from circle
-                # Y is determined by right-hand rule
+                # Normalize x_axis
+                x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
+                x_axis = [x/x_norm for x in x_axis]
                 
-                # Direction from center to point (for Z axis)
-                radial_y = pose.position.y - center[1]
-                radial_z = pose.position.z - center[2]
-                radial_mag = math.sqrt(radial_y**2 + radial_z**2)
-                if radial_mag > 0:
-                    normal_y = radial_y / radial_mag
-                    normal_z = radial_z / radial_mag
-                else:
-                    normal_y, normal_z = 0, 1
+                # Z axis is along the circle axis (global X) - FLIPPED
+                z_axis = [-1, 0, 0]  # Flipped from [1, 0, 0]
                 
-                # Using direction cosine matrix to quaternion conversion
-                # First build rotation matrix where:
-                # - X column is tangent vector (0, tangent_y, tangent_z)
-                # - Z column is outward normal (0, normal_y, normal_z)
-                # - Y column is cross product Z×X
+                # Y axis is the cross product of Z and X (right-hand rule)
+                y_axis = [
+                    z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
+                    z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
+                    z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
+                ]
                 
-                # Calculate Y by cross product (Z×X) - maintains right-hand coordinate system
-                cross_y = -normal_z * tangent_z  # First component is zero
-                cross_z = normal_y * tangent_z
+                # Build a rotation matrix with these axes
+                rotation_matrix = [
+                    x_axis[0], y_axis[0], z_axis[0],
+                    x_axis[1], y_axis[1], z_axis[1],
+                    x_axis[2], y_axis[2], z_axis[2]
+                ]
                 
-                # Convert this frame orientation to a quaternion
-                # Using a simplification for this specific case
-                pitch = math.atan2(tangent_z, tangent_y)
-                yaw = 0
-                roll = math.pi/2  # Rotate so tool is sideways to circle
-                
-                q = quaternion_from_euler(roll, pitch, yaw)
+                # Convert to quaternion
+                q = self.rotation_matrix_to_quaternion(rotation_matrix)
                 
             elif axis == 'y':
                 pose.position.x = center[0] + radius * math.cos(angle)
                 pose.position.y = center[1] + height
                 pose.position.z = center[2] + radius * math.sin(angle)
                 
-                # For Y-axis circle, tangent is in XZ plane
-                tangent_x = -math.sin(angle)
-                tangent_z = math.cos(angle)
+                # Calculate vector from waypoint to center (inward radial direction)
+                # This will be our tool's X-axis
+                x_axis = [
+                    center[0] - pose.position.x,
+                    0,  # Y component is zero because we're in XZ plane
+                    center[2] - pose.position.z
+                ]
                 
-                # Similar approach to the x-axis case, but adapted for y-axis
-                # Direction from center to point (for normal)
-                radial_x = pose.position.x - center[0]
-                radial_z = pose.position.z - center[2]
-                radial_mag = math.sqrt(radial_x**2 + radial_z**2)
-                if radial_mag > 0:
-                    normal_x = radial_x / radial_mag
-                    normal_z = radial_z / radial_mag
-                else:
-                    normal_x, normal_z = 1, 0
+                # Normalize x_axis
+                x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
+                x_axis = [x/x_norm for x in x_axis]
                 
-                # Convert to a quaternion
-                roll = math.atan2(tangent_z, tangent_x)
-                pitch = math.pi/2  # Rotate so tool is sideways to circle
-                yaw = 0
+                # Z axis is along the circle axis (global Y) - FLIPPED
+                z_axis = [0, -1, 0]  # Flipped from [0, 1, 0]
                 
-                q = quaternion_from_euler(roll, pitch, yaw)
+                # Y axis is the cross product of Z and X (right-hand rule)
+                y_axis = [
+                    z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
+                    z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
+                    z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
+                ]
+                
+                # Build a rotation matrix with these axes
+                rotation_matrix = [
+                    x_axis[0], y_axis[0], z_axis[0],
+                    x_axis[1], y_axis[1], z_axis[1],
+                    x_axis[2], y_axis[2], z_axis[2]
+                ]
+                
+                # Convert to quaternion
+                q = self.rotation_matrix_to_quaternion(rotation_matrix)
             
             pose.orientation.x = q[0]
             pose.orientation.y = q[1]
@@ -207,6 +230,48 @@ class AuboRobotPlannerNode():
             
         return waypoints
 
+    def rotation_matrix_to_quaternion(self, R):
+        """
+        Convert a 3x3 rotation matrix to a quaternion
+        Expects R as a flattened list [r11, r12, r13, r21, r22, r23, r31, r32, r33]
+        Returns quaternion as [x, y, z, w]
+        """
+        # Reshape R to access elements easily
+        r11, r12, r13 = R[0], R[1], R[2]
+        r21, r22, r23 = R[3], R[4], R[5]
+        r31, r32, r33 = R[6], R[7], R[8]
+        
+        # Algorithm from "Quaternion from rotation matrix" in Wikipedia
+        trace = r11 + r22 + r33
+        
+        if trace > 0:
+            S = math.sqrt(trace + 1.0) * 2
+            qw = 0.25 * S
+            qx = (r32 - r23) / S
+            qy = (r13 - r31) / S
+            qz = (r21 - r12) / S
+        elif (r11 > r22) and (r11 > r33):
+            S = math.sqrt(1.0 + r11 - r22 - r33) * 2
+            qw = (r32 - r23) / S
+            qx = 0.25 * S
+            qy = (r12 + r21) / S
+            qz = (r13 + r31) / S
+        elif r22 > r33:
+            S = math.sqrt(1.0 + r22 - r11 - r33) * 2
+            qw = (r13 - r31) / S
+            qx = (r12 + r21) / S
+            qy = 0.25 * S
+            qz = (r23 + r32) / S
+        else:
+            S = math.sqrt(1.0 + r33 - r11 - r22) * 2
+            qw = (r21 - r12) / S
+            qx = (r13 + r31) / S
+            qy = (r23 + r32) / S
+            qz = 0.25 * S
+            
+        # Return as [x, y, z, w]
+        return [qx, qy, qz, qw]
+    
     def visualize_waypoints(self, waypoints, clear_previous=True):
         """
         Visualize waypoints in RViz using markers
@@ -249,30 +314,101 @@ class AuboRobotPlannerNode():
             
             marker_array.markers.append(sphere_marker)
             
-            # Arrow marker for orientation
-            arrow_marker = Marker()
-            arrow_marker.header.frame_id = self.waypoint_frame_id
-            arrow_marker.header.stamp = rospy.Time.now()
-            arrow_marker.ns = "waypoint_orientations"
-            arrow_marker.id = i
-            arrow_marker.type = Marker.ARROW
-            arrow_marker.action = Marker.ADD
+            # Visualize the X, Y, Z axes for better orientation understanding
+            axis_length = 0.05  # Length of each axis arrow
+            axis_width = 0.005   # Width of each axis arrow
             
-            # Set position and orientation from waypoint
-            arrow_marker.pose = waypoint
+            # X axis (red) - points forward in robot tool frame
+            x_marker = Marker()
+            x_marker.header.frame_id = self.waypoint_frame_id
+            x_marker.header.stamp = rospy.Time.now()
+            x_marker.ns = "waypoint_x_axis"
+            x_marker.id = i
+            x_marker.type = Marker.ARROW
+            x_marker.action = Marker.ADD
+            x_marker.pose = waypoint
+            x_marker.scale.x = axis_length
+            x_marker.scale.y = axis_width
+            x_marker.scale.z = axis_width
+            x_marker.color.r = 1.0
+            x_marker.color.g = 0.0
+            x_marker.color.b = 0.0
+            x_marker.color.a = 0.8
+            marker_array.markers.append(x_marker)
             
-            # Set marker scale
-            arrow_marker.scale.x = 0.05  # arrow length
-            arrow_marker.scale.y = 0.01  # arrow width
-            arrow_marker.scale.z = 0.01  # arrow height
+            # Y axis (green) - points left in robot tool frame
+            y_marker = Marker()
+            y_marker.header.frame_id = self.waypoint_frame_id
+            y_marker.header.stamp = rospy.Time.now()
+            y_marker.ns = "waypoint_y_axis"
+            y_marker.id = i
+            y_marker.type = Marker.ARROW
+            y_marker.action = Marker.ADD
+            y_marker.pose = waypoint
             
-            # Blue color
-            arrow_marker.color.r = 0.2
-            arrow_marker.color.g = 0.2
-            arrow_marker.color.b = 0.8
-            arrow_marker.color.a = 0.7
+            # For Y-axis, we need to rotate the arrow 90 degrees around Z
+            # We'll use the original orientation and apply an additional rotation
+            q_orig = [waypoint.orientation.x, waypoint.orientation.y, 
+                      waypoint.orientation.z, waypoint.orientation.w]
+            q_y = quaternion_from_euler(0, 0, math.pi/2)  # 90 degrees around Z
             
-            marker_array.markers.append(arrow_marker)
+            # Multiply quaternions: q_result = q_orig * q_y
+            # This gives us the Y axis orientation
+            q_result = [
+                q_orig[3]*q_y[0] + q_orig[0]*q_y[3] + q_orig[1]*q_y[2] - q_orig[2]*q_y[1],
+                q_orig[3]*q_y[1] - q_orig[0]*q_y[2] + q_orig[1]*q_y[3] + q_orig[2]*q_y[0],
+                q_orig[3]*q_y[2] + q_orig[0]*q_y[1] - q_orig[1]*q_y[0] + q_orig[2]*q_y[3],
+                q_orig[3]*q_y[3] - q_orig[0]*q_y[0] - q_orig[1]*q_y[1] - q_orig[2]*q_y[2]
+            ]
+            
+            y_marker.pose.orientation.x = q_result[0]
+            y_marker.pose.orientation.y = q_result[1]
+            y_marker.pose.orientation.z = q_result[2]
+            y_marker.pose.orientation.w = q_result[3]
+            
+            y_marker.scale.x = axis_length
+            y_marker.scale.y = axis_width
+            y_marker.scale.z = axis_width
+            y_marker.color.r = 0.0
+            y_marker.color.g = 1.0
+            y_marker.color.b = 0.0
+            y_marker.color.a = 0.8
+            marker_array.markers.append(y_marker)
+            
+            # Z axis (blue) - points up in robot tool frame
+            z_marker = Marker()
+            z_marker.header.frame_id = self.waypoint_frame_id
+            z_marker.header.stamp = rospy.Time.now()
+            z_marker.ns = "waypoint_z_axis"
+            z_marker.id = i
+            z_marker.type = Marker.ARROW
+            z_marker.action = Marker.ADD
+            z_marker.pose = waypoint
+            
+            # For Z-axis, we need to rotate 90 degrees around Y
+            q_z = quaternion_from_euler(0, -math.pi/2, 0)  # -90 degrees around Y
+            
+            # Multiply quaternions: q_result = q_orig * q_z
+            q_result = [
+                q_orig[3]*q_z[0] + q_orig[0]*q_z[3] + q_orig[1]*q_z[2] - q_orig[2]*q_z[1],
+                q_orig[3]*q_z[1] - q_orig[0]*q_z[2] + q_orig[1]*q_z[3] + q_orig[2]*q_z[0],
+                q_orig[3]*q_z[2] + q_orig[0]*q_z[1] - q_orig[1]*q_z[0] + q_orig[2]*q_z[3],
+                q_orig[3]*q_z[3] - q_orig[0]*q_z[0] - q_orig[1]*q_z[1] - q_orig[2]*q_z[2]
+            ]
+            
+            z_marker.pose.orientation.x = q_result[0]
+            z_marker.pose.orientation.y = q_result[1]
+            z_marker.pose.orientation.z = q_result[2]
+            z_marker.pose.orientation.w = q_result[3]
+            
+            z_marker.scale.x = axis_length
+            z_marker.scale.y = axis_width
+            z_marker.scale.z = axis_width
+            z_marker.color.r = 0.0
+            z_marker.color.g = 0.0
+            z_marker.color.b = 1.0
+            z_marker.color.a = 0.8
+            marker_array.markers.append(z_marker)
             
             # Text marker for waypoint number
             text_marker = Marker()
@@ -339,7 +475,7 @@ class AuboRobotPlannerNode():
         
         # Publish the marker array
         self.marker_publisher.publish(marker_array)
-        rospy.loginfo(f"Published {len(waypoints)} waypoint markers to RViz")
+        rospy.loginfo(f"Published {len(waypoints)} waypoint markers with full coordinate frames to RViz")
 
     def execute_circular_motion(self, center, radius, num_points=20, axis='x', velocity_scale=None, max_retries=3, position_tolerance=0.01, orientation_tolerance=0.1):
         """
@@ -525,17 +661,16 @@ class AuboRobotPlannerNode():
         current_pose = self.group.get_current_pose().pose
         
         # Base center position (will be offset for each run)
+        # ###################################
+        # TUNE OR CHANGE THIS VALUE
+        # ###################################
         base_center = [
             current_pose.position.x + 0.2,  # 20cm in front of current position
             current_pose.position.y,
             current_pose.position.z - 0.2
         ]
-        
-        # ###################################
-        # TUNE OR CHANGE THIS VALUE
-        # ###################################
-        radius = 0.025
-        axis = 'z'     # Circle perpendicular to z-axis (in XY plane)
+        radius = 0.05
+        axis = 'x'     # xyz
         
         # Perform 5 runs with different offsets and waypoint counts
         for run in range(6):
@@ -663,7 +798,7 @@ class AuboRobotPlannerNode():
         
         # Use smaller radius for the tube so the robot moves around it
         tube_radius = radius * 0.6  # 60% of the motion radius
-        tube_height = 0.5  # 50cm height
+        tube_height = 0.3  # 50cm height
         
         # Create a tube pose
         tube_pose = Pose()
@@ -714,7 +849,7 @@ class AuboRobotPlannerNode():
         - orientation_tolerance: tolerance for orientation error (radians)
         """
         # Set up the collision environment with a tube inside the circle
-        self.setup_collision_environment(center, radius, axis=axis)
+        # self.setup_collision_environment(center, radius, axis=axis)
         
         # Now execute the circular motion with collision checking enabled
         return self.execute_circular_motion(center, radius, num_points, axis, velocity_scale, max_retries, position_tolerance, orientation_tolerance)
