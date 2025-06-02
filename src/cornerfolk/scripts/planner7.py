@@ -12,6 +12,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 import math
 import numpy as np
 from tf.transformations import quaternion_from_euler, euler_from_quaternion
+from matplotlib import pyplot as plt
 
 class AuboRobotPlannerNode():
     """
@@ -183,49 +184,113 @@ class AuboRobotPlannerNode():
             
             # Apply pipe inclination if specified
             if pipe_inclination != 0:
-                # For pipe inclination, we rotate around the Y-axis (assuming pipe runs along X-axis)
-                # This creates the standard welding positions
-                
-                # Create inclination rotation matrix around Y-axis
-                cos_inc = math.cos(inclination_rad)
-                sin_inc = math.sin(inclination_rad)
-                
-                # Rotate the position relative to center
-                rel_pos = [base_x - center[0], base_y - center[1], base_z - center[2]]
-                
-                # Apply Y-axis rotation to position
-                rotated_pos = [
-                    rel_pos[0] * cos_inc + rel_pos[2] * sin_inc,
-                    rel_pos[1],
-                    -rel_pos[0] * sin_inc + rel_pos[2] * cos_inc
-                ]
+                # Apply rotation based on the circle axis
+                if axis == 'z':
+                    # For Z-axis: rotate around Y-axis (pipe runs along X-axis)
+                    cos_inc = math.cos(inclination_rad)
+                    sin_inc = math.sin(inclination_rad)
+                    
+                    # Rotate the position relative to center
+                    rel_pos = [base_x - center[0], base_y - center[1], base_z - center[2]]
+                    
+                    # Apply Y-axis rotation to position
+                    rotated_pos = [
+                        rel_pos[0] * cos_inc + rel_pos[2] * sin_inc,
+                        rel_pos[1],
+                        -rel_pos[0] * sin_inc + rel_pos[2] * cos_inc
+                    ]
+                    
+                    # Apply inclination rotation to orientation vectors
+                    rotated_x = [
+                        x_axis[0] * cos_inc + x_axis[2] * sin_inc,
+                        x_axis[1],
+                        -x_axis[0] * sin_inc + x_axis[2] * cos_inc
+                    ]
+                    
+                    rotated_y = [
+                        y_axis[0] * cos_inc + y_axis[2] * sin_inc,
+                        y_axis[1],
+                        -y_axis[0] * sin_inc + y_axis[2] * cos_inc
+                    ]
+                    
+                    rotated_z = [
+                        z_axis[0] * cos_inc + z_axis[2] * sin_inc,
+                        z_axis[1],
+                        -z_axis[0] * sin_inc + z_axis[2] * cos_inc
+                    ]
+                    
+                elif axis == 'y':
+                    # For Y-axis: rotate around X-axis (pipe runs along Z-axis when inclined)
+                    cos_inc = math.cos(inclination_rad)
+                    sin_inc = math.sin(inclination_rad)
+                    
+                    # Rotate the position relative to center
+                    rel_pos = [base_x - center[0], base_y - center[1], base_z - center[2]]
+                    
+                    # Apply X-axis rotation to position
+                    rotated_pos = [
+                        rel_pos[0],
+                        rel_pos[1] * cos_inc - rel_pos[2] * sin_inc,
+                        rel_pos[1] * sin_inc + rel_pos[2] * cos_inc
+                    ]
+                    
+                    # Apply inclination rotation to orientation vectors
+                    rotated_x = [
+                        x_axis[0],
+                        x_axis[1] * cos_inc - x_axis[2] * sin_inc,
+                        x_axis[1] * sin_inc + x_axis[2] * cos_inc
+                    ]
+                    
+                    rotated_y = [
+                        y_axis[0],
+                        y_axis[1] * cos_inc - y_axis[2] * sin_inc,
+                        y_axis[1] * sin_inc + y_axis[2] * cos_inc
+                    ]
+                    
+                    rotated_z = [
+                        z_axis[0],
+                        z_axis[1] * cos_inc - z_axis[2] * sin_inc,
+                        z_axis[1] * sin_inc + z_axis[2] * cos_inc
+                    ]
+                    
+                elif axis == 'x':
+                    # For X-axis: rotate around Z-axis (pipe runs along Y-axis when inclined)
+                    cos_inc = math.cos(inclination_rad)
+                    sin_inc = math.sin(inclination_rad)
+                    
+                    # Rotate the position relative to center
+                    rel_pos = [base_x - center[0], base_y - center[1], base_z - center[2]]
+                    
+                    # Apply Z-axis rotation to position
+                    rotated_pos = [
+                        rel_pos[0] * cos_inc - rel_pos[1] * sin_inc,
+                        rel_pos[0] * sin_inc + rel_pos[1] * cos_inc,
+                        rel_pos[2]
+                    ]
+                    
+                    # Apply inclination rotation to orientation vectors
+                    rotated_x = [
+                        x_axis[0] * cos_inc - x_axis[1] * sin_inc,
+                        x_axis[0] * sin_inc + x_axis[1] * cos_inc,
+                        x_axis[2]
+                    ]
+                    
+                    rotated_y = [
+                        y_axis[0] * cos_inc - y_axis[1] * sin_inc,
+                        y_axis[0] * sin_inc + y_axis[1] * cos_inc,
+                        y_axis[2]
+                    ]
+                    
+                    rotated_z = [
+                        z_axis[0] * cos_inc - z_axis[1] * sin_inc,
+                        z_axis[0] * sin_inc + z_axis[1] * cos_inc,
+                        z_axis[2]
+                    ]
                 
                 # Set final position
                 pose.position.x = center[0] + rotated_pos[0]
                 pose.position.y = center[1] + rotated_pos[1]
                 pose.position.z = center[2] + rotated_pos[2]
-                
-                # Apply inclination rotation to orientation vectors
-                # Rotate X-axis
-                rotated_x = [
-                    x_axis[0] * cos_inc + x_axis[2] * sin_inc,
-                    x_axis[1],
-                    -x_axis[0] * sin_inc + x_axis[2] * cos_inc
-                ]
-                
-                # Rotate Y-axis
-                rotated_y = [
-                    y_axis[0] * cos_inc + y_axis[2] * sin_inc,
-                    y_axis[1],
-                    -y_axis[0] * sin_inc + y_axis[2] * cos_inc
-                ]
-                
-                # Rotate Z-axis
-                rotated_z = [
-                    z_axis[0] * cos_inc + z_axis[2] * sin_inc,
-                    z_axis[1],
-                    -z_axis[0] * sin_inc + z_axis[2] * cos_inc
-                ]
                 
                 # Build rotation matrix with rotated axes
                 rotation_matrix = [
@@ -256,7 +321,7 @@ class AuboRobotPlannerNode():
             
             # Log orientation angles for debugging
             rpy = euler_from_quaternion([q[0], q[1], q[2], q[3]])
-            rospy.logdebug(f"Waypoint {i} (inclination {pipe_inclination}°): Roll={math.degrees(rpy[0]):.1f}°, "
+            rospy.logdebug(f"Waypoint {i} (axis={axis}, inclination {pipe_inclination}°): Roll={math.degrees(rpy[0]):.1f}°, "
                           f"Pitch={math.degrees(rpy[1]):.1f}°, "
                           f"Yaw={math.degrees(rpy[2]):.1f}°")
             
@@ -574,7 +639,11 @@ class AuboRobotPlannerNode():
         # Give time to view the waypoints in RViz before execution
         rospy.loginfo("Waypoints have been visualized in RViz. Starting motion in 3 seconds...")
         rospy.sleep(3)
-        
+
+        position_errors = []
+        joint_angle_history = [[] for _ in range(self.num_joint)]
+        time_stamps = []
+
         # Move through each waypoint using IK
         for i, waypoint in enumerate(waypoints):
             retry_count = 0
@@ -612,10 +681,17 @@ class AuboRobotPlannerNode():
                     rospy.logwarn(f"Failed to execute plan to waypoint {i+1}")
                     retry_count += 1
                     continue
+
+                if plan.joint_trajectory.points:
+                    joint_vals = plan.joint_trajectory.points[-1].positions
+                    for j in range(self.num_joint):
+                        joint_angle_history[j].append(math.degrees(joint_vals[j]))
+                    time_stamps.append(i)
                 
                 # Verify the robot has reached the target position
-                reached_position = self.verify_target_reached(waypoint, position_tolerance, orientation_tolerance)
-                
+                reached_position, pos_error = self.verify_target_reached(waypoint, position_tolerance, orientation_tolerance, return_error=True)
+                position_errors.append(pos_error)
+
                 if reached_position:
                     rospy.loginfo(f"Successfully reached waypoint {i+1}/{len(waypoints)}")
                     success = True
@@ -633,6 +709,41 @@ class AuboRobotPlannerNode():
                 if user_input != 'y':
                     rospy.logwarn("Circular motion aborted by user")
                     return False
+
+        plt.figure()
+        plt.plot(time_stamps, joint_angle_history[0], label="Joint1_JointValue (degree)")
+        plt.plot(time_stamps, joint_angle_history[1], label="Joint2_JointValue (degree)")
+        plt.plot(time_stamps, joint_angle_history[2], label="Joint3_JointValue (degree)")
+        plt.title("Joint 1, 2, 3 angles produced in IK")
+        plt.xlabel("Time (s)")
+        plt.ylabel("Value")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        # Plot joint 4, 5, 6
+        plt.figure()
+        plt.plot(time_stamps, joint_angle_history[3], label="Joint4_JointValue (degree)")
+        plt.plot(time_stamps, joint_angle_history[4], label="Joint5_JointValue (degree)")
+        plt.plot(time_stamps, joint_angle_history[5], label="Joint6_JointValue (degree)")
+        plt.title("Joint 4, 5, 6 angles produced in IK")
+        plt.xlabel("Time (s)")
+        plt.ylabel("Value")
+        plt.grid(True)
+        plt.legend()
+        plt.tight_layout()
+        plt.show()
+
+        # Plot error
+        plt.figure()
+        plt.plot(range(1, len(position_errors)+1), position_errors, marker='o')
+        plt.title('Position Error vs Waypoint Index')
+        plt.xlabel('Waypoint Index')
+        plt.ylabel('Position Error (m)')
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
         
         rospy.loginfo("Circular motion completed")
         
@@ -669,7 +780,7 @@ class AuboRobotPlannerNode():
         
         return True
     
-    def verify_target_reached(self, target_pose, position_tolerance=0.01, orientation_tolerance=0.1):
+    def verify_target_reached(self, target_pose, position_tolerance=0.01, orientation_tolerance=0.1, return_error=False):
         """
         Verify that the robot has reached the target pose within tolerance
         
@@ -707,9 +818,11 @@ class AuboRobotPlannerNode():
         
         # Log the errors
         rospy.loginfo(f"Position error: {position_error:.4f}m, Orientation error: {orientation_error:.4f}")
-        
-        # Return True if both errors are within tolerance
-        return position_error <= position_tolerance and orientation_error <= orientation_tolerance
+    
+        if return_error:
+            return position_error <= position_tolerance and orientation_error <= orientation_tolerance, position_error
+        else:
+            return position_error <= position_tolerance and orientation_error <= orientation_tolerance
         
     def demo_circular_motion(self, event=None):
         """
@@ -879,9 +992,9 @@ class AuboRobotPlannerNode():
                 q = [0, 0, 0, 1]
         elif axis == 'x':
             if pipe_inclination != 0:
-                # Combine X-axis alignment with inclination
+                # For X-axis: first align with X, then apply Z-axis rotation for inclination
                 q1 = quaternion_from_euler(0, math.pi/2, 0)  # Align with X
-                q2 = quaternion_from_euler(0, math.radians(pipe_inclination), 0)  # Apply inclination
+                q2 = quaternion_from_euler(0, 0, math.radians(pipe_inclination))  # Apply inclination around Z
                 # Multiply quaternions
                 q = self.multiply_quaternions(q1, q2)
             else:
@@ -889,13 +1002,13 @@ class AuboRobotPlannerNode():
                 q = quaternion_from_euler(0, math.pi/2, 0)
         elif axis == 'y':
             if pipe_inclination != 0:
-                # Combine Y-axis alignment with inclination
+                # For Y-axis: first align with Y, then apply X-axis rotation for inclination
                 q1 = quaternion_from_euler(math.pi/2, 0, 0)  # Align with Y
-                q2 = quaternion_from_euler(0, math.radians(pipe_inclination), 0)  # Apply inclination
+                q2 = quaternion_from_euler(math.radians(pipe_inclination), 0, 0)  # Apply inclination around X
                 # Multiply quaternions
                 q = self.multiply_quaternions(q1, q2)
             else:
-                # Rotate -90 degrees around x to align with y-axis
+                # Rotate 90 degrees around x to align with y-axis
                 q = quaternion_from_euler(math.pi/2, 0, 0)
         
         tube_pose.orientation.x = q[0]
