@@ -673,7 +673,7 @@ class AuboRobotPlannerNode():
         axis = 'z'     # xyz
         
         # Perform 5 runs with different offsets and waypoint counts
-        for run in range(6):
+        for run in range(1):
             
             # First run has 4 waypoints, remaining runs have 20
             num_points = 4 if run == 0 else 20
