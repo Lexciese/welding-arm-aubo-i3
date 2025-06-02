@@ -182,6 +182,7 @@ catkin_install_python(PROGRAMS
   scripts/planner4.py
   scripts/planner5.py
   scripts/planner6.py
+  scripts/planner7.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
