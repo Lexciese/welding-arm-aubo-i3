@@ -82,7 +82,7 @@ class AuboRobotPlannerNode():
         else:
             rospy.logwarn("Velocity scaling factor must be between 0.0 and 1.0")
     
-    def generate_circular_waypoints(self, center, radius, num_points, start_angle=0, end_angle=2*math.pi, height=0, axis='z'):
+    def generate_circular_waypoints(self, center, radius, num_points, start_angle=0, end_angle=2*math.pi, height=0, axis='z', pipe_inclination=0):
         """
         Generate waypoints in a circular pattern with end effector X-axis pointing toward circle center
         
@@ -93,36 +93,40 @@ class AuboRobotPlannerNode():
         - start_angle, end_angle: define the portion of circle to trace (radians)
         - height: z-height of the circle
         - axis: axis perpendicular to circle plane ('x', 'y', or 'z')
+        - pipe_inclination: inclination angle of the pipe in degrees (0=horizontal, 45=6G position)
         
         Returns array of geometry_msgs.msg.Pose
         """
         waypoints = []
         angle_step = (end_angle - start_angle) / num_points
         
+        # Convert inclination to radians
+        inclination_rad = math.radians(pipe_inclination)
+        
         for i in range(num_points + 1):
             angle = start_angle + i * angle_step
             pose = Pose()
             
-            # Position based on circle equation
+            # Generate base position and orientation first (assuming horizontal pipe)
             if axis == 'z':
-                pose.position.x = center[0] + radius * math.cos(angle)
-                pose.position.y = center[1] + radius * math.sin(angle)
-                pose.position.z = center[2] + height
+                # Base position on horizontal circle
+                base_x = center[0] + radius * math.cos(angle)
+                base_y = center[1] + radius * math.sin(angle)
+                base_z = center[2] + height
                 
                 # Calculate vector from center to waypoint (outward radial direction)
-                # This will be our tool's X-axis (pointing outward from center)
                 x_axis = [
-                    pose.position.x - center[0],  # Flipped to point outward
-                    pose.position.y - center[1],  # Flipped to point outward
-                    0  # Z component is zero because we're in XY plane
+                    base_x - center[0],
+                    base_y - center[1],
+                    0
                 ]
                 
                 # Normalize x_axis
                 x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
                 x_axis = [x/x_norm for x in x_axis]
                 
-                # Z axis is along the circle axis (global Z) - NOW POINTING OUTWARD
-                z_axis = [0, 0, 1]  # Changed from [0, 0, -1] to point outward
+                # Z axis is along the circle axis (global Z) - pointing outward
+                z_axis = [0, 0, 1]
                 
                 # Y axis is the cross product of Z and X (right-hand rule)
                 y_axis = [
@@ -130,90 +134,120 @@ class AuboRobotPlannerNode():
                     z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
                     z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
                 ]
-                
-                # Build a rotation matrix with these axes
-                rotation_matrix = [
-                    x_axis[0], y_axis[0], z_axis[0],
-                    x_axis[1], y_axis[1], z_axis[1],
-                    x_axis[2], y_axis[2], z_axis[2]
-                ]
-                
-                # Convert to quaternion
-                q = self.rotation_matrix_to_quaternion(rotation_matrix)
                 
             elif axis == 'x':
-                pose.position.x = center[0] + height
-                pose.position.y = center[1] + radius * math.cos(angle)
-                pose.position.z = center[2] + radius * math.sin(angle)
+                # Base position on YZ plane circle
+                base_x = center[0] + height
+                base_y = center[1] + radius * math.cos(angle)
+                base_z = center[2] + radius * math.sin(angle)
                 
-                # Calculate vector from center to waypoint (outward radial direction)
-                # This will be our tool's X-axis pointing outward from center
                 x_axis = [
-                    0,  # X component is zero because we're in YZ plane
-                    pose.position.y - center[1],  # Flipped to point outward
-                    pose.position.z - center[2]   # Flipped to point outward
+                    0,
+                    base_y - center[1],
+                    base_z - center[2]
                 ]
                 
-                # Normalize x_axis
                 x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
                 x_axis = [x/x_norm for x in x_axis]
                 
-                # Z axis is along the circle axis (global X) - NOW POINTING OUTWARD
-                z_axis = [1, 0, 0]  # Changed from [-1, 0, 0] to point outward
+                z_axis = [1, 0, 0]
                 
-                # Y axis is the cross product of Z and X (right-hand rule)
                 y_axis = [
                     z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
                     z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
                     z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
                 ]
-                
-                # Build a rotation matrix with these axes
-                rotation_matrix = [
-                    x_axis[0], y_axis[0], z_axis[0],
-                    x_axis[1], y_axis[1], z_axis[1],
-                    x_axis[2], y_axis[2], z_axis[2]
-                ]
-                
-                # Convert to quaternion
-                q = self.rotation_matrix_to_quaternion(rotation_matrix)
                 
             elif axis == 'y':
-                pose.position.x = center[0] + radius * math.cos(angle)
-                pose.position.y = center[1] + height
-                pose.position.z = center[2] + radius * math.sin(angle)
+                # Base position on XZ plane circle
+                base_x = center[0] + radius * math.cos(angle)
+                base_y = center[1] + height
+                base_z = center[2] + radius * math.sin(angle)
                 
-                # Calculate vector from center to waypoint (outward radial direction)
-                # This will be our tool's X-axis pointing outward from center
                 x_axis = [
-                    pose.position.x - center[0],  # Flipped to point outward
-                    0,  # Y component is zero because we're in XZ plane
-                    pose.position.z - center[2]   # Flipped to point outward
+                    base_x - center[0],
+                    0,
+                    base_z - center[2]
                 ]
                 
-                # Normalize x_axis
                 x_norm = math.sqrt(x_axis[0]**2 + x_axis[1]**2 + x_axis[2]**2)
                 x_axis = [x/x_norm for x in x_axis]
                 
-                # Z axis is along the circle axis (global Y) - NOW POINTING OUTWARD
-                z_axis = [0, 1, 0]  # Changed from [0, -1, 0] to point outward
+                z_axis = [0, 1, 0]
                 
-                # Y axis is the cross product of Z and X (right-hand rule)
                 y_axis = [
                     z_axis[1]*x_axis[2] - z_axis[2]*x_axis[1],
                     z_axis[2]*x_axis[0] - z_axis[0]*x_axis[2],
                     z_axis[0]*x_axis[1] - z_axis[1]*x_axis[0]
                 ]
+            
+            # Apply pipe inclination if specified
+            if pipe_inclination != 0:
+                # For pipe inclination, we rotate around the Y-axis (assuming pipe runs along X-axis)
+                # This creates the standard welding positions
                 
-                # Build a rotation matrix with these axes
+                # Create inclination rotation matrix around Y-axis
+                cos_inc = math.cos(inclination_rad)
+                sin_inc = math.sin(inclination_rad)
+                
+                # Rotate the position relative to center
+                rel_pos = [base_x - center[0], base_y - center[1], base_z - center[2]]
+                
+                # Apply Y-axis rotation to position
+                rotated_pos = [
+                    rel_pos[0] * cos_inc + rel_pos[2] * sin_inc,
+                    rel_pos[1],
+                    -rel_pos[0] * sin_inc + rel_pos[2] * cos_inc
+                ]
+                
+                # Set final position
+                pose.position.x = center[0] + rotated_pos[0]
+                pose.position.y = center[1] + rotated_pos[1]
+                pose.position.z = center[2] + rotated_pos[2]
+                
+                # Apply inclination rotation to orientation vectors
+                # Rotate X-axis
+                rotated_x = [
+                    x_axis[0] * cos_inc + x_axis[2] * sin_inc,
+                    x_axis[1],
+                    -x_axis[0] * sin_inc + x_axis[2] * cos_inc
+                ]
+                
+                # Rotate Y-axis
+                rotated_y = [
+                    y_axis[0] * cos_inc + y_axis[2] * sin_inc,
+                    y_axis[1],
+                    -y_axis[0] * sin_inc + y_axis[2] * cos_inc
+                ]
+                
+                # Rotate Z-axis
+                rotated_z = [
+                    z_axis[0] * cos_inc + z_axis[2] * sin_inc,
+                    z_axis[1],
+                    -z_axis[0] * sin_inc + z_axis[2] * cos_inc
+                ]
+                
+                # Build rotation matrix with rotated axes
+                rotation_matrix = [
+                    rotated_x[0], rotated_y[0], rotated_z[0],
+                    rotated_x[1], rotated_y[1], rotated_z[1],
+                    rotated_x[2], rotated_y[2], rotated_z[2]
+                ]
+                
+            else:
+                # No inclination - use original position and orientation
+                pose.position.x = base_x
+                pose.position.y = base_y
+                pose.position.z = base_z
+                
                 rotation_matrix = [
                     x_axis[0], y_axis[0], z_axis[0],
                     x_axis[1], y_axis[1], z_axis[1],
                     x_axis[2], y_axis[2], z_axis[2]
                 ]
-                
-                # Convert to quaternion
-                q = self.rotation_matrix_to_quaternion(rotation_matrix)
+            
+            # Convert to quaternion
+            q = self.rotation_matrix_to_quaternion(rotation_matrix)
             
             pose.orientation.x = q[0]
             pose.orientation.y = q[1]
@@ -222,7 +256,7 @@ class AuboRobotPlannerNode():
             
             # Log orientation angles for debugging
             rpy = euler_from_quaternion([q[0], q[1], q[2], q[3]])
-            rospy.logdebug(f"Waypoint {i}: Roll={math.degrees(rpy[0]):.1f}°, "
+            rospy.logdebug(f"Waypoint {i} (inclination {pipe_inclination}°): Roll={math.degrees(rpy[0]):.1f}°, "
                           f"Pitch={math.degrees(rpy[1]):.1f}°, "
                           f"Yaw={math.degrees(rpy[2]):.1f}°")
             
@@ -477,7 +511,27 @@ class AuboRobotPlannerNode():
         self.marker_publisher.publish(marker_array)
         rospy.loginfo(f"Published {len(waypoints)} waypoint markers with full coordinate frames to RViz")
 
-    def execute_circular_motion(self, center, radius, num_points=20, axis='x', velocity_scale=None, max_retries=3, position_tolerance=0.01, orientation_tolerance=0.1):
+    def get_welding_position_inclination(self, position_name):
+        """
+        Get the pipe inclination angle for standard welding positions
+        
+        Parameters:
+        - position_name: '1G', '2G', '5G', '6G' (standard AWS welding positions)
+        
+        Returns:
+        - inclination angle in degrees
+        """
+        welding_positions = {
+            '1G': 0,     # Flat position (horizontal pipe, horizontal weld)
+            '2G': 0,     # Horizontal position (vertical pipe, horizontal weld)
+            '5G': 0,     # Horizontal fixed position (horizontal pipe, vertical weld)
+            '6G': 45,    # Inclined position (45° inclined pipe)
+            '6GR': 45    # Restricted 6G position
+        }
+        
+        return welding_positions.get(position_name.upper(), 0)
+
+    def execute_circular_motion(self, center, radius, num_points=20, axis='x', velocity_scale=None, max_retries=3, position_tolerance=0.01, orientation_tolerance=0.1, pipe_inclination=0):
         """
         Execute motion in a circular pattern with end effector perpendicular to circle
         Default axis is now 'x' instead of 'z'
@@ -491,18 +545,28 @@ class AuboRobotPlannerNode():
         - max_retries: maximum number of attempts for each waypoint
         - position_tolerance: tolerance for position error (meters)
         - orientation_tolerance: tolerance for orientation error (radians)
+        - pipe_inclination: inclination angle of the pipe in degrees (0=horizontal, 45=6G position)
         """
         # Set velocity scaling if provided
         if velocity_scale is not None:
             self.set_velocity_scaling(velocity_scale)
             
-        # Generate waypoints
+        # Generate waypoints with pipe inclination
         waypoints = self.generate_circular_waypoints(
             center=center,
             radius=radius,
             num_points=num_points,
-            axis=axis
+            axis=axis,
+            pipe_inclination=pipe_inclination
         )
+        
+        # Log welding position information
+        if pipe_inclination == 0:
+            rospy.loginfo("Executing circular motion in flat/horizontal position")
+        elif pipe_inclination == 45:
+            rospy.loginfo("Executing circular motion in 6G welding position (45° inclined)")
+        else:
+            rospy.loginfo(f"Executing circular motion with {pipe_inclination}° pipe inclination")
         
         # Visualize waypoints in RViz
         self.visualize_waypoints(waypoints)
@@ -650,58 +714,56 @@ class AuboRobotPlannerNode():
     def demo_circular_motion(self, event=None):
         """
         Demonstrate a circular motion with the robot
-        Performs 5 runs with increasing offsets:
-        - First run: 4 waypoints
-        - Runs 2-5: 20 waypoints each
-        - Each run has an offset of 0.05 from the previous run
+        Performs welding motions in different positions including 6G
         """
-        rospy.loginfo("Starting multi-run circular motion demo")
+        rospy.loginfo("Starting multi-position welding demo")
         
         # Get current end effector position
         current_pose = self.group.get_current_pose().pose
         
-        # Base center position (will be offset for each run)
-        # ###################################
-        # TUNE OR CHANGE THIS VALUE
-        # ###################################
+
+        # ######################################################################
+        # TUNING/ GANTI PARAMETER DI SINI
+        # ######################################################################
+
+        # Base center position
         base_center = [
-            current_pose.position.x + 0.3,  # 20cm in front of current position
+            current_pose.position.x + 0.3,  # 30cm in front of current position
             current_pose.position.y + 0.1,
             current_pose.position.z - 0.3
         ]
         radius = 0.05
-        axis = 'z'     # xyz
+        axis = 'z'
+
+        # INKLINASI PIPA
+        inclination = 45  # 45 degrees for 6G position
+
+        # ######################################################################
+        # ######################################################################
         
-        # Perform 5 runs with different offsets and waypoint counts
-        for run in range(1):
+        for i in range(1):
             
-            # First run has 4 waypoints, remaining runs have 20
-            num_points = 4 if run == 0 else 20
-            
-            rospy.loginfo(f"Run {run+1}/5: radius={radius:.2f}m, waypoints={num_points}")
-            
-            # Execute circular motion with collision avoidance
+            # Execute circular motion with the specified inclination
             success = self.execute_circular_motion_with_collision_avoidance(
                 center=base_center,
                 radius=radius,
-                num_points=num_points,  
-                axis=axis,       
-                velocity_scale=0.3  # Move at 30% of maximum speed
+                num_points=20,
+                axis=axis,
+                velocity_scale=0.3,  # Move at 30% of maximum speed
+                pipe_inclination=inclination
             )
             
-            radius = radius + 0.01  # 5cm offset per run
-
-            # If circular motion failed, stop the demo
+            # If motion failed, stop the demo
             if not success:
-                rospy.logwarn("Multi-run circular motion demo aborted")
+                rospy.logwarn("Multi-position welding demo aborted")
                 return
             
-            # Pause between runs
-            if run < 4:  # Don't pause after the last run
-                rospy.loginfo(f"Completed run {run+1}/5. Starting next run in 2 seconds...")
-                rospy.sleep(2)
+            # Pause between positions
+            if i < 2:
+                rospy.loginfo(f"Completed. Starting next position in 3 seconds...")
+                rospy.sleep(3)
         
-        rospy.loginfo("Multi-run circular motion demo completed successfully")
+        rospy.loginfo("Multi-position welding demo completed successfully")
 
     def add_tube_collision_object(self, name, radius, height, pose, frame_id="world"):
         """
@@ -783,7 +845,7 @@ class AuboRobotPlannerNode():
         
         rospy.loginfo(f"Published visualization marker for tube '{name}'")
     
-    def setup_collision_environment(self, center, radius, axis='z'):
+    def setup_collision_environment(self, center, radius, axis='z', pipe_inclination=0):
         """
         Set up the collision environment with a tube inside the circular motion path
         
@@ -791,6 +853,7 @@ class AuboRobotPlannerNode():
         - center: [x, y, z] coordinates of circle center
         - radius: circle radius of the motion path
         - axis: axis perpendicular to circle plane ('x', 'y', or 'z')
+        - pipe_inclination: inclination angle of the pipe in degrees
         """
         # Clear existing collision objects
         self.scene.remove_world_object()
@@ -806,24 +869,39 @@ class AuboRobotPlannerNode():
         tube_pose.position.y = center[1]
         tube_pose.position.z = center[2]
         
-        # Set orientation based on the circle axis
+        # Set orientation based on the circle axis and pipe inclination
         if axis == 'z':
-            # Tube is already aligned with z-axis by default
-            tube_pose.orientation.w = 1.0
+            if pipe_inclination != 0:
+                # Apply inclination rotation around Y-axis
+                q = quaternion_from_euler(0, math.radians(pipe_inclination), 0)
+            else:
+                # Tube is aligned with z-axis by default
+                q = [0, 0, 0, 1]
         elif axis == 'x':
-            # Rotate 90 degrees around y to align with x-axis
-            q = quaternion_from_euler(0, math.pi/2, 0)
-            tube_pose.orientation.x = q[0]
-            tube_pose.orientation.y = q[1]
-            tube_pose.orientation.z = q[2]
-            tube_pose.orientation.w = q[3]
+            if pipe_inclination != 0:
+                # Combine X-axis alignment with inclination
+                q1 = quaternion_from_euler(0, math.pi/2, 0)  # Align with X
+                q2 = quaternion_from_euler(0, math.radians(pipe_inclination), 0)  # Apply inclination
+                # Multiply quaternions
+                q = self.multiply_quaternions(q1, q2)
+            else:
+                # Rotate 90 degrees around y to align with x-axis
+                q = quaternion_from_euler(0, math.pi/2, 0)
         elif axis == 'y':
-            # Rotate -90 degrees around x to align with y-axis
-            q = quaternion_from_euler(math.pi/2, 0, 0)
-            tube_pose.orientation.x = q[0]
-            tube_pose.orientation.y = q[1]
-            tube_pose.orientation.z = q[2]
-            tube_pose.orientation.w = q[3]
+            if pipe_inclination != 0:
+                # Combine Y-axis alignment with inclination
+                q1 = quaternion_from_euler(math.pi/2, 0, 0)  # Align with Y
+                q2 = quaternion_from_euler(0, math.radians(pipe_inclination), 0)  # Apply inclination
+                # Multiply quaternions
+                q = self.multiply_quaternions(q1, q2)
+            else:
+                # Rotate -90 degrees around x to align with y-axis
+                q = quaternion_from_euler(math.pi/2, 0, 0)
+        
+        tube_pose.orientation.x = q[0]
+        tube_pose.orientation.y = q[1]
+        tube_pose.orientation.z = q[2]
+        tube_pose.orientation.w = q[3]
         
         # Add the tube collision object
         self.add_tube_collision_object("motion_tube", tube_radius, tube_height, tube_pose)
@@ -833,8 +911,28 @@ class AuboRobotPlannerNode():
         
         # Wait for the planning scene to update
         rospy.sleep(1.0)
-    
-    def execute_circular_motion_with_collision_avoidance(self, center, radius, num_points=20, axis='x', velocity_scale=None, max_retries=3, position_tolerance=0.01, orientation_tolerance=0.1):
+
+    def multiply_quaternions(self, q1, q2):
+        """
+        Multiply two quaternions
+        
+        Parameters:
+        - q1, q2: quaternions as [x, y, z, w]
+        
+        Returns:
+        - result quaternion as [x, y, z, w]
+        """
+        x1, y1, z1, w1 = q1
+        x2, y2, z2, w2 = q2
+        
+        return [
+            w1*x2 + x1*w2 + y1*z2 - z1*y2,
+            w1*y2 - x1*z2 + y1*w2 + z1*x2,
+            w1*z2 + x1*y2 - y1*x2 + z1*w2,
+            w1*w2 - x1*x2 - y1*y2 - z1*z2
+        ]
+
+    def execute_circular_motion_with_collision_avoidance(self, center, radius, num_points=20, axis='x', velocity_scale=None, max_retries=3, position_tolerance=0.01, orientation_tolerance=0.1, pipe_inclination=0):
         """
         Execute motion in a circular pattern with collision avoidance
         
@@ -847,12 +945,13 @@ class AuboRobotPlannerNode():
         - max_retries: maximum number of attempts for each waypoint
         - position_tolerance: tolerance for position error (meters)
         - orientation_tolerance: tolerance for orientation error (radians)
+        - pipe_inclination: inclination angle of the pipe in degrees (0=horizontal, 45=6G position)
         """
         # Set up the collision environment with a tube inside the circle
-        self.setup_collision_environment(center, radius, axis=axis)
+        self.setup_collision_environment(center, radius, axis=axis, pipe_inclination=pipe_inclination)
         
         # Now execute the circular motion with collision checking enabled
-        return self.execute_circular_motion(center, radius, num_points, axis, velocity_scale, max_retries, position_tolerance, orientation_tolerance)
+        return self.execute_circular_motion(center, radius, num_points, axis, velocity_scale, max_retries, position_tolerance, orientation_tolerance, pipe_inclination)
 
     def ros_planner(self):
         rospy.spin()
